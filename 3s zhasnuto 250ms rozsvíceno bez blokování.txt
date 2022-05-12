@@ -1,0 +1,54 @@
+// Vzorový projekt 
+
+#include "stm8s.h"
+#include "milis.h"
+//#include "stdio.h"
+//#include "spse_stm8.h"
+//#include "stm8_hd44780.h"
+uint16_t time=0;
+uint16_t previoustime=0;
+
+
+
+
+void main(void){
+CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
+init_milis(); // rozběhnout milis časovač
+GPIO_Init (GPIOC,GPIO_PIN_ALL,GPIO_MODE_OUT_PP_LOW_SLOW);
+GPIO_Init (GPIOE,GPIO_PIN_4,GPIO_MODE_IN_FL_NO_IT);
+GPIO_WriteHigh(GPIOC,GPIO_PIN_ALL);
+while (1){
+	time=milis();
+	if(time-previoustime==3000){
+		GPIO_WriteLow(GPIOC,GPIO_PIN_1);
+	}
+	if(time-previoustime==3250){
+		GPIO_WriteHigh(GPIOC,GPIO_PIN_1);
+		previoustime=time;
+	}	
+	
+}
+}
+#ifdef USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *   where the assert_param error has occurred.
+  * @param file: pointer to the source file name
+  * @param line: assert_param error line source number
+  * @retval : None
+  */
+void assert_failed(u8* file, u32 line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -1,0 +1,92 @@
+// Vzorový projekt 
+
+#include "stm8s.h"
+#include "milis.h"
+//#include "stdio.h"
+//#include "spse_stm8.h"
+//#include "stm8_hd44780.h"
+uint8_t x=0;
+uint8_t y=0;
+void display(uint8_t number);
+
+
+void main(void){
+CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
+init_milis(); // rozběhnout milis časovač
+GPIO_Init (GPIOC,GPIO_PIN_ALL,GPIO_MODE_OUT_PP_LOW_SLOW);
+GPIO_Init (GPIOE,GPIO_PIN_4,GPIO_MODE_IN_FL_NO_IT);
+display(x);
+  while (1){
+	if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)==RESET&&x==0){	
+	x=1;
+	y=y+1;
+	if(y>9){
+		y=0;
+		}
+	display(y);	
+	}	
+	if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)!=RESET&&x==1){	
+	x=0;
+	}
+	
+}
+}
+
+
+void display(uint8_t number){
+	if (number==0){
+		GPIO_Write (GPIOC,0b10000000);   //zhasnout g f e d c b a 0
+		}
+	else if	(number==1){
+		GPIO_Write (GPIOC,0b11111000);	
+		}
+	else if	(number==2){
+		GPIO_Write (GPIOC,0b00100100);
+		}
+	else if	(number==3){
+		GPIO_Write (GPIOC,0b00110000);
+		}	
+	else if	(number==4){
+		GPIO_Write (GPIOC,0b01011000);
+		}
+	else if	(number==5){
+		GPIO_Write (GPIOC,0b00010010);
+		}
+	else if	(number==6){
+		GPIO_Write (GPIOC,0b00000010);
+		}
+	else if	(number==7){
+		GPIO_Write (GPIOC,0b10111000);
+		}	
+	else if	(number==8){
+		GPIO_Write (GPIOC,0b00000000);
+		}	
+	else if	(number==9){
+		GPIO_Write (GPIOC,0b00011000);
+		}			
+}
+
+
+#ifdef USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *   where the assert_param error has occurred.
+  * @param file: pointer to the source file name
+  * @param line: assert_param error line source number
+  * @retval : None
+  */
+void assert_failed(u8* file, u32 line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

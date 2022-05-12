@@ -1,0 +1,90 @@
+// Vzorový projekt 
+#include "stm8s.h"
+#include "milis.h"
+#include "stdio.h"
+//#include "spse_stm8.h"
+//#include "stm8_hd44780.h"
+
+void uart_putchar(char data); // pošle jeden znak na UART
+void uart_puts(char* retezec); // pošle celý řetězec a UART
+
+char text[32]; // deklarujeme pole 32bytů jménem "text". Typ char je totéž jako typ uint8_t. Použitm char dávám najevo že zde budu ukládat texty
+
+uint16_t x=0;
+uint16_t reflex=0;
+uint16_t start=0;
+uint8_t random=0;
+
+void main(void){
+CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
+init_milis(); // spustit časovač millis
+// konfigurace UARTu, volíme přenosovou rychlost 9600b/s, aktivujeme pouze TX (Transmit - vysílač)
+UART1_Init(115200,UART1_WORDLENGTH_8D,UART1_STOPBITS_1,UART1_PARITY_NO,UART1_SYNCMODE_CLOCK_DISABLE,UART1_MODE_TX_ENABLE);
+UART1_Cmd(ENABLE); // Aktivace UARTu (přebírá kontrolu nad TX pinem - PA5)
+GPIO_Init(GPIOE,GPIO_PIN_4,GPIO_MODE_IN_FL_NO_IT);
+GPIO_Init (GPIOC,GPIO_PIN_1,GPIO_MODE_OUT_PP_LOW_SLOW); 
+GPIO_WriteHigh(GPIOC,GPIO_PIN_1);
+	
+	while (1){																				
+	if((milis()-start>3000+(random*10))&&reflex==0){		//LED se rozsvítí mezi 3000ms a 5550ms
+		GPIO_WriteLow(GPIOC,GPIO_PIN_1);
+		start=milis();
+		reflex=1;
+		}	
+	if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)==RESET&&x==0&&reflex==1){	//detekce stisku a napsaní reakčního času
+		x=1;
+		reflex=2;
+		GPIO_WriteHigh(GPIOC,GPIO_PIN_1);
+		sprintf(text,"Reakcni cas:%ums \n\r",milis()-start);
+		uart_puts(text);
+	if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)==RESET&&reflex==2){	//aby čas sepnutí LED byl náhodný(random maximálně 255,pak přeteče na 0)
+		random++;
+	}	
+	}	
+	if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)!=RESET&&x==1&&reflex==2){	//reset časovače po úspěšném kliknutí
+		x=0;
+		reflex=0;
+		start=milis();
+	}
+	if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)==RESET&&reflex==0){	//pokud budeme držet tlačítko časovač se resetuje a LED se nikdy nerozsvítí
+		start=milis();
+	}
+	}
+}
+// pošle jeden znak na UART
+void uart_putchar(char data){
+	// počkej až bude UART připraven převzít další data k odeslání
+ while(UART1_GetFlagStatus(UART1_FLAG_TXE) == RESET); // čekej dokud je vlajka Transmit Empty vynulovaná (UART vysílá a nemá místo na další data)
+ UART1_SendData8(data); // předej data k odeslání UARTu
+}
+
+// pošle UARTem řetězec 
+void uart_puts(char* retezec){ 
+ while(*retezec){ // podívej se do paměti na místo kam ukazuje proměnná "retezec" a pokud je tam nenulový znak (text ještě neskončil) tak ho pošli
+  uart_putchar(*retezec); // pošli znak který je na adrese "retezec"
+  retezec++; // zvedni adresu o jedna abychom moli zpracovat další znak v poli
+ }
+}
+#ifdef USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *   where the assert_param error has occurred.
+  * @param file: pointer to the source file name
+  * @param line: assert_param error line source number
+  * @retval : None
+  */
+void assert_failed(u8* file, u32 line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

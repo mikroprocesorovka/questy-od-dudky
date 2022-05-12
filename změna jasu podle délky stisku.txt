@@ -1,0 +1,77 @@
+// Vzorový projekt 
+#include "stm8s.h"
+#include "milis.h"
+//#include "stdio.h"
+//#include "spse_stm8.h"
+//#include "stm8_hd44780.h"
+void init_pwm(void);
+void process_pwm_change(void);
+#define TIMER_TOP (1600-1) // strop časovače 1600 impulzů. Při 16MHz, je to 1600*1/16M = 100us
+void main(void){
+CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
+init_milis(); // spustit časovač millis
+init_pwm();
+GPIO_Init(GPIOE,GPIO_PIN_4,GPIO_MODE_IN_FL_NO_IT);
+  while (1){
+	process_pwm_change();
+}
+}
+void process_pwm_change(void){
+static uint16_t x=0; //stisk tlačítka 
+static uint16_t last_time=0; 
+static uint32_t strida;
+static uint16_t time=0;
+
+time=milis();
+if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)==RESET && x==0) {
+	x=1;
+	last_time = time;	
+}
+if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_4)!=RESET && x==1) {
+	x=0;
+}
+if(x==1 && (time - last_time) > 250){
+	strida=(time - last_time - 250)/1.09375;//  1750/1600 ale stupidní věc neumí dělit ahhaahhaahahaah
+	if(strida>1599){
+		strida=1599;
+	}
+	TIM2_SetCompare1(strida);
+
+}	
+}
+	void init_pwm(void){
+	GPIO_Init(GPIOD, GPIO_PIN_4, GPIO_MODE_OUT_PP_LOW_SLOW);
+	TIM2_TimeBaseInit(TIM2_PRESCALER_1,TIMER_TOP);
+	TIM2_OC1Init( 	// inicializujeme kanál 1 (TM2_CH1)
+	TIM2_OCMODE_PWM1, 				// režim PWM1
+	TIM2_OUTPUTSTATE_ENABLE,	// Výstup povolen (TIMer ovládá pin)
+	0,											// výchozí hodnota šířky pulzu (střídy)
+	TIM2_OCPOLARITY_LOW				// Polarita LOW protože LED rozsvěcím 0 (spol. anoda)
+	
+	);
+	TIM2_OC1PreloadConfig(ENABLE);
+	TIM2_Cmd(ENABLE);
+}	
+#ifdef USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *   where the assert_param error has occurred.
+  * @param file: pointer to the source file name
+  * @param line: assert_param error line source number
+  * @retval : None
+  */
+void assert_failed(u8* file, u32 line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

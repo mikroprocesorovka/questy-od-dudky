@@ -1,0 +1,145 @@
+#include "stm8s.h"
+#include "milis.h"
+#include "stm8_hd44780.h"
+#include "stdio.h"
+
+void init_enc(void);
+void process_enc(void);
+void init_timer(void);
+void print(void);
+
+volatile int16_t hodnota=0; // prominná jejíž hodnotu miníme enkodérem
+int16_t x=0;
+char text[24];
+
+// kurzor
+uint8_t symbol_1[8]={
+0b00000,
+0b00100,
+0b01110,
+0b10101,
+0b00100,
+0b00100,
+0b00100,
+0b00000
+};
+
+void main(void){
+CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // 16MHz z interního RC oscilátoru
+init_milis(); // milis kvuli delay_ms()
+init_enc();		// inicializace vstupu enkodéru
+lcd_init();		// inicializace displeje
+init_timer();	// spustí tim3 s poerušením každé 2ms
+enableInterrupts(); // není nutné, protože tuto funkci voláme v init_milis()
+lcd_store_symbol(0,symbol_1);
+
+lcd_clear();	//reset displeje
+
+lcd_gotoxy(11,0);
+lcd_puts(":");
+lcd_gotoxy(8,0);
+lcd_puts(":");
+
+//test numbers
+lcd_gotoxy(6,0);
+lcd_puts("9");
+lcd_gotoxy(7,0);
+lcd_puts("9");
+
+lcd_gotoxy(9,0);
+lcd_puts("5");
+lcd_gotoxy(10,0);
+lcd_puts("9");
+
+lcd_gotoxy(12,0);
+lcd_puts("5");
+lcd_gotoxy(13,0);
+lcd_puts("9");
+
+print();
+
+  while (1){
+		//sprintf(text,"%i",hodnota); // poiprav text na displej
+		//lcd_gotoxy(2,0); // nastav kurzor na zaeátek displeje (abychom zapisovali text vždy na stejné místo)
+		//lcd_puts(text); // vypiš poipravený text
+		
+	}
+}
+ INTERRUPT_HANDLER(TIM3_UPD_OVF_BRK_IRQHandler, 15)
+ {
+	 TIM3_ClearITPendingBit(TIM3_IT_UPDATE);
+	 process_enc();
+ }
+
+void init_timer(void){
+TIM3_TimeBaseInit(TIM3_PRESCALER_16,1999);
+TIM3_ITConfig(TIM3_IT_UPDATE, ENABLE);
+TIM3_Cmd(ENABLE);
+}
+
+void init_enc(void){
+GPIO_Init(GPIOE,GPIO_PIN_5,GPIO_MODE_IN_PU_NO_IT); //enkodér
+GPIO_Init(GPIOC,GPIO_PIN_6,GPIO_MODE_IN_PU_NO_IT); //enkodér
+GPIO_Init(GPIOC,GPIO_PIN_7,GPIO_MODE_IN_PU_NO_IT); //tlačítko enkodéru
+}
+
+void print(void){
+	lcd_gotoxy(x,1);
+	lcd_putchar(0);
+}
+
+void process_enc(void){
+	static minule=1;
+ 	if(GPIO_ReadInputPin(GPIOC,GPIO_PIN_6) == RESET && minule==1){
+		minule = 0; // nyní je pin v log.0
+		// poeeteme stav vstupu B
+		lcd_gotoxy(x,1);
+		lcd_puts(" ");
+		if(GPIO_ReadInputPin(GPIOE,GPIO_PIN_5) == RESET){
+			x++;
+			if(x>15){
+				x=15;
+			}
+		}
+		else{
+			x--;
+			if(x<0){
+				x=0;	
+			}
+		}
+		print();
+	}
+	if(GPIO_ReadInputPin(GPIOC,GPIO_PIN_6) != RESET){
+	minule = 1;
+	} // pokud je vstup A v log.1
+	if(GPIO_ReadInputPin(GPIOC,GPIO_PIN_7) == RESET){
+		hodnota++;
+		if(hodnota>9){
+			hodnota=0;
+		}
+	}
+}
+
+#ifdef USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *   where the assert_param error has occurred.
+  * @param file: pointer to the source file name
+  * @param line: assert_param error line source number
+  * @retval : None
+  */
+void assert_failed(u8* file, u32 line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -1,0 +1,69 @@
+// Vzorový projekt 
+#include "stm8s.h"
+#include "milis.h"
+//#include "stdio.h"
+//#include "spse_stm8.h"
+//#include "stm8_hd44780.h"
+
+void init_pwm(void);
+void LED(void);
+#define TIMER_TOP (1600-1) // strop časovače 1600 impulzů. Při 16MHz, je to 1600*1/16M = 100us
+void main(void){
+CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // taktovat MCU na 16MHz
+init_pwm();
+GPIO_Init(GPIOE,GPIO_PIN_4,GPIO_MODE_IN_FL_NO_IT);
+UART1_Init(115200,UART1_WORDLENGTH_8D,UART1_STOPBITS_1,UART1_PARITY_NO,UART1_SYNCMODE_CLOCK_DISABLE,UART1_MODE_RX_ENABLE);
+UART1_Cmd(ENABLE);
+
+  while (1){
+	LED();
+	}
+}
+void LED(void){
+static char input;
+if(UART1_GetFlagStatus(UART1_FLAG_RXNE) != RESET){
+		input=UART1_ReceiveData8();
+	}
+	if (input=='a'){
+	TIM2_SetCompare1(1600-1);
+	}
+	if(input>=0 && input<10) {
+	TIM2_SetCompare1(160*input);
+	}	
+}
+
+	void init_pwm(void){
+	GPIO_Init(GPIOD, GPIO_PIN_4, GPIO_MODE_OUT_PP_LOW_SLOW);
+	TIM2_TimeBaseInit(TIM2_PRESCALER_1,TIMER_TOP);
+	TIM2_OC1Init( 	// inicializujeme kanál 1 (TM2_CH1)
+	TIM2_OCMODE_PWM1, 				// režim PWM1
+	TIM2_OUTPUTSTATE_ENABLE,	// Výstup povolen (TIMer ovládá pin)
+	0,											// výchozí hodnota šířky pulzu (střídy)
+	TIM2_OCPOLARITY_LOW				// Polarita LOW protože LED rozsvěcím 0 (spol. anoda)
+		);
+	TIM2_OC1PreloadConfig(ENABLE);
+	TIM2_Cmd(ENABLE);
+}	
+#ifdef USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *   where the assert_param error has occurred.
+  * @param file: pointer to the source file name
+  * @param line: assert_param error line source number
+  * @retval : None
+  */
+void assert_failed(u8* file, u32 line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
+
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
